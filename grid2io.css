@@ -1,0 +1,159 @@
+
+div.gridWrapper {
+
+}
+div.gridBlocker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 1, 3, 0.18);
+    z-index: 10000;
+}
+table.gridTable {
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
+    border-collapse: separate !important;
+    border: 1px solid #ddd;
+    width: 100% !important;
+    margin: 0 !important;
+    background-color: #fff;
+    border-spacing: 0;
+    border-left: 0px;
+    border-top: 0px;
+}
+/*
+TH
+*/
+table.gridTable thead tr th {
+    background: #eee;
+    padding: 8px;
+    line-height: 20px;
+    height: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    border: 1px solid #ddd;
+    border-right: 0px;
+    border-bottom: 0px;
+    white-space:nowrap;
+}
+
+table.gridTable tfoot tr td {
+    background: #F7F7F7;
+    padding: 4px 8px;
+    line-height: 16px;
+    color: #99969A;
+    height: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    border: 1px solid #ddd;
+    border-top-color: #C7C7C7;
+    border-bottom-color: #E8E8E8;
+    border-right: 0px;
+}
+table.gridTable thead tr th.sortable {
+    cursor: pointer;
+}
+table.gridTable thead tr th.ascend {
+    background-image: url("images/asc.png");
+    background-position: right;
+    background-repeat: no-repeat;
+    padding-right:20px;
+}
+
+table.gridTable thead tr th.descend {
+    background-image: url("images/desc.png");
+    background-position: right;
+    background-repeat: no-repeat;
+    padding-right:20px;
+}
+table.gridTable thead tr th.sortable:hover {
+    background-color: #e4e4e4;
+}
+
+
+/*
+TR
+*/
+table.gridTable tbody tr {
+    background: #FFFFFF;
+}
+table.gridTable tbody tr:nth-of-type(odd) {
+    background: #F9F9F9;
+
+}
+table.gridTable tbody tr:hover {
+    background: #f5f5f5;
+}
+table.gridTable tbody tr.selected {
+    background: #f5f5f5;
+}
+/*
+TD
+*/
+table.gridTable tbody tr td {
+    font-size: 13px;
+    border-top: 1px solid ;
+    border: 1px solid #ddd;
+    line-height: 18px;
+    padding:8px;
+    border-right: 0px;
+    border-bottom: 0px;
+}
+
+
+
+div.gridPager {
+    display: flex;
+    margin: 6px 0px
+
+}
+div.gridPager > div {
+    margin-right: 6px;
+
+}
+div.gridPager div.pages {
+    display: flex;
+    justify-content: space-around;
+}
+div.gridPager div.pages div.separator {
+    display: inline-flex;
+    padding:2px 4px;
+    margin-left: 2px;
+}
+
+div.gridPager div.pages div.page {
+    display: inline-flex;
+    padding:2px 4px;
+    margin-left: 2px;
+    border: #f0ede7 solid 1px;
+    cursor: pointer;
+}
+div.gridPager div.next {
+    background: url(images/next.png);
+    width:20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+div.gridPager div.back {
+    background: url(images/back.png);
+    width:20px;
+    height: 20px;
+    cursor: pointer;
+
+}
+
+div.gridPager div.pages div.active {
+    background: #e0dfe3;
+}
+div.gridPager > div.resultText {
+    font-style: italic;
+    font-size: 16px;
+    line-height: 15px;
+    height: 16px;
+    display: inline-flex;
+    align-self: center;
+    margin-left: 10px;
+}
