@@ -1,2 +1,3 @@
 # grid2io
-Javascript generic grid with proper APIs that supports server side only flows (no client side)
+grid2io is a small generic grid library that aims to simplify and increase flexibility on integrations of the datagrid element.
+It comes with proper APIs that supports server side only flows (no client side)
