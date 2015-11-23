@@ -5,13 +5,20 @@ It comes with APIs that support server side  flows (no client side implementatio
 
 ## Installation
 
-Since grid2io is depended on jQuery, including the jQuery library is mandatory.
+requirements : 
+* include jQuery
+* include grid2.js
+* include grid2.css
+* enable access to files in the images/ folder referenced by grid2.css
+
+and you're good to go.
 
 ## Supported features 
-+ grid selection (checkboxes)
-+ grid sorting/paging comes out of the box
-+ rich right click event handling
-+ background row data
++ grid row selection (checkboxes)
++ grid sorting/paging 
++ 
++ row and cell level right click event handling
++ supports row-level additional data
 + dynamic column hiding/showing
 
 ## Starting and Examples
@@ -37,7 +44,7 @@ the grid element will be injected into #grid-container
 
 grid2io comes with a provided server-client protocol that can easily be overrode with your own server integration
 
-Example provided client request
+ Here's the client request in the provided example
 
     {
         "paging": { "size" : 25, "num":2 },
@@ -45,8 +52,7 @@ Example provided client request
         "filters" : {} // you can filter by controls bound to your own controller
     }
 
-Example provided server response
-
+and the server server response from the example
 
     {
         "pageSize": 25,
@@ -65,12 +71,14 @@ Example provided server response
      // your own controller
      ctrl.request = function() {
          this.grid.loadingOn();
-         // example handler
-         callServer('/yourserver/grid/' status + '/' + this.grid.getPaging(), function(data) {
+         // example ajax handler
+         callServer('/yourserver/grid?' + $.param( { filters: this.ui.getFilters() , paging: this.grid.getPaging() } ), function(data) {
+               // must take care of rows flushing / formating / pushing  and setResultSize() of returned page size from server
               ctrl.grid.loadingOff();
               ctrl.grid.flushView();
               ctrl.grid.loadRows(data.rows);
-              ctrl.grid.setResultSize(data.results);
+              this.grid.setPageSize(data.pageSize);
+              ctrl.grid.setResultSize(data.resultNum);
          });
               
      }
@@ -104,11 +112,13 @@ Generally raw column types are unrecommended, for complex cell data handling see
 
 **selectable rows**
 
-row selection should be enabled before ctrl.initGrid() is called
+row selection requires you to declair a key column which values are unique and rows can be identified by
 
     ctrl.grid.enableRowSelect(key);
 
-get selected data
+enableRowSelect() must be called before ctrl.initGrid() is called
+
+at any time, selected rows data is accessable by the selectedData property:
 
     ctrl.grid.selectedData
 
@@ -145,4 +155,4 @@ The grid element that's takes care of presentation , sorting/paging controls and
 
 **grid2row**
 
-The grid row element that renders grid cells and is passed back on row/cell related events.
+The grid row element , a sub element of grid2, that renders grid cells and is passed back on row/cell related events like row formatting callbacks, right click callbacks and row select callbacks.
