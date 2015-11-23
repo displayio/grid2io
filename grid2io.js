@@ -25,8 +25,8 @@ emitter.prototype.trigger = function(ev, params) {
 
 
 /**
- * mock grid controller 
- * to implement your own controller reimplment the request() method
+ *
+ *
  *
  * @param settings
  */
@@ -79,11 +79,6 @@ grid2ctrl.prototype.getQuery = function() {
 	return {};
 }
 
-/**
-* the main object responsible for the UI
-*
-*/
-
 
 function grid2() {
 	this.ui = {};
@@ -93,18 +88,15 @@ function grid2() {
 	this.sortQueue = [];
 	this.headers = {};
 	this.footers = {};
-	this.settings = {};
+	this.settings = {sortLimit: 2};
 	this.selectedData = {};
 	this.formatFns = {};
 }
 grid2.prototype = new emitter();
 grid2.prototype.setup = function(settings) {
-	this.settings = settings || {};
+	$.extend(this.settings, settings);
 }
-/*
-* col options: {"type": ["raw" | "supervised" (defualt) ], } 
-*
-*/
+
 
 grid2.prototype.setCols = function(cols) {
 	this.cols = cols;
@@ -112,22 +104,48 @@ grid2.prototype.setCols = function(cols) {
 grid2.prototype.initPagers = function() {
 	this.bottomPager = new grid2pager();
 	this.topPager = new grid2pager();
-	this.topPager.bindPager(this.bottomPager);
+	var grid = this;
+	this.topPager.on('sizeChanged', function(size) {
+		grid.pageSize = size;
+		grid.bottomPager.setPageSize(size);
+		grid.trigger('sizeChanged', [size]);
+
+	});
+	this.bottomPager.on('sizeChanged', function(size) {
+		grid.pageSize = size;
+		grid.topPager.setPageSize(size);
+		grid.trigger('sizeChanged', [size]);
+
+	});
+	this.topPager.on('pageSelected', function(page) {
+		grid.pageNum = page;
+		grid.bottomPager.selectPage(page, true);
+		grid.trigger('pageSelected', [page]);
+	});
+	this.bottomPager.on('pageSelected', function(page) {
+		grid.pageNum = page;
+		grid.topPager.selectPage(page, true);
+		grid.trigger('pageSelected', [page]);
+	});
+	this.pageNum = 1;
+	this.pageSize = 25;
 	this.bottomPager.init(this);
-	this.bottomPager.bindPager(this.topPager);
 	this.topPager.init(this);
+	this.bottomPager.initPageSizes(this.pageSize, [10, 25, 50, 100]);
+	this.topPager.initPageSizes(this.pageSize, [10, 25, 50, 100]);
+	this.bottomPager.cursor = this.pageNum;
+	this.topPager.cursor = this.pageNum;
 	this.topPager.injectInto(this.ui.topPager);
 	this.bottomPager.injectInto(this.ui.bottomPager);
-	this.on('sizeChanged', function(size) {
-		this.pageSize = size;
-	});
-	this.on('pageSelected', function(page) {
-		this.pageNum = page;
-	});
-	this.pageSize = this.topPager.getPageSize();
-	this.pageNum = this.topPager.cursor;
-
 }
+grid2.prototype.setPage = function(num) {
+	if(num) {
+		this.pageNum = num;
+		this.topPager.selectPage(num, true);
+		this.bottomPager.selectPage(num, true);
+	}
+};
+
 
 grid2.prototype.initUI = function() {
 	this.ui.theaders= $('<thead>');
@@ -137,8 +155,9 @@ grid2.prototype.initUI = function() {
 	this.ui.topPager = $('<div>');
 	this.ui.bottomPager = $('<div>');
 	this.ui.wrapper = $('<div>').addClass('gridWrapper').append(this.ui.topPager,this.ui.table,this.ui.bottomPager);
-	this.ui.blocker = $('<div>').addClass('gridBlocker').text('loading');
+	this.ui.blocker = $('<div>').addClass('gridBlocker');
 	this.ui.wrapper.prepend(this.ui.blocker);
+	this.trigger('uiInitialized');
 
 }
 grid2.prototype.injectInto = function(elm) {
@@ -170,7 +189,7 @@ grid2.prototype.drawHeaders = function() {
 		row.append(selectHeader);
 	}
 	for(var col in this.cols) {
-		var title = this.cols[col].title || col;
+		var title = this.cols[col].hasOwnProperty('title')?this.cols[col].title:col;
 		var header = $('<th>').text(title);
 		if(!this.cols[col].hasOwnProperty('sortable') || this.cols[col].sortable) {
 			(function() {
@@ -188,6 +207,7 @@ grid2.prototype.drawHeaders = function() {
 		this.headers[col] = header;
 	}
 	this.ui.theaders.html(row);
+	this.trigger('headersDrawn');
 };
 grid2.prototype.loadingOn = function() {
 	this.ui.blocker.show();
@@ -223,7 +243,7 @@ grid2.prototype.getPaging = function() {
 }
 grid2.prototype.getSorting = function() {
 	var sorting = {};
-	for(var i = 0; i < Math.min(2, this.sortQueue.length);i++) {
+	for(var i = 0; i < Math.min(this.settings.sortLimit, this.sortQueue.length);i++) {
 		var col = this.sortQueue[i];
 		sorting[col] = this.sortOrder[col];
 	}
@@ -324,6 +344,60 @@ grid2.prototype.setFooter = function(footData) {
 	this.ui.tfooter.html(frow);
 
 }
+grid2.prototype.trimColumn = function(col, chars) {
+	this.colFormatter(col, function(rowData, cell) {
+		var text = rowData[col];
+		if(text && text.length > chars ) {
+			var span = $('<span>').attr('title', text).text(text.substr(0, chars) + '...');
+			cell.html(span);
+		} else {
+			cell.text(text);
+		}
+	})
+}
+
+grid2.prototype.arrayJoinColumn = function(col, maxItems) {
+	this.colFormatter(col, function(rowData, cell) {
+		var data = rowData[col];
+
+
+		if(data && (typeof data =='object') ) {
+			if(data.constructor.name != 'Array') {
+				var dataArr = [];
+				for(var index in data) {
+					dataArr.push(data[index]);
+				}
+				data = dataArr;
+			}
+			var joinedData = data.join(', ');
+			if (data.length > maxItems) {
+				var sliced = data.slice(0, maxItems);
+				var span = $('<span>').attr('title', joinedData).text(sliced.join(', ') + ' ...');
+				cell.html(span);
+
+			} else {
+				cell.text(joinedData);
+			}
+		} else {
+			cell.text('-');
+		}
+	})
+}
+grid2.prototype.setLink = function(col, schemaUrl, targetBlank, staticText) {
+	this.colFormatter(col, function(rowData, cell) {
+		var text = staticText || rowData[col];
+		var url =schemaUrl;
+		for(var colName in rowData) {
+			url = url.replace('{' + colName +'}', rowData[colName]);
+		}
+		var link = $('<a>').attr('href', url).text(text);
+		if(targetBlank) {
+			link.attr('target', '_blank');
+		}
+		cell.html(link);
+
+	});
+}
 
 /**
  * grid row object
@@ -359,10 +433,10 @@ grid2row.prototype.addCell = function(col) {
 		row.grid.trigger("rightClick", [e, row]);
 		e.preventDefault();
 	});
-	if(this.data.hasOwnProperty(col) ) {
-		if(this.grid.formatFns.hasOwnProperty(col)) {
-			td.html(this.grid.formatFns[col].apply(this, [ this.data, td ]));
-		} else {
+	if(this.grid.formatFns.hasOwnProperty(col)) {
+		td.html(this.grid.formatFns[col].apply(this, [ this.data, td ]));
+	} else {
+		if(this.data.hasOwnProperty(col) ) {
 			switch (this.grid.cols[col].type) {
 				case 'raw':
 					td.html(this.data[col]);
@@ -432,15 +506,14 @@ grid2pager.prototype = emitter.prototype;
 
 grid2pager.prototype.init = function(grid) {
 	this.grid = grid;
-	this.cursor = 1;
 	this.ui = {};
 	this.ui.body = $('<div>').addClass('gridPager');
 	var pager = this;
 	this.ui.pageSize = $('<select>').addClass('pageSize').change(function() {
-		pager.trigger('sizeChanged', [pager.getPageSize()]);
+		pager.size = pager.getUIPageSize();
+		pager.trigger('sizeChanged', [pager.size ]);
 	});
 
-	this.initPageSizes(25, [10, 25, 50, 100]);
 	this.ui.pages = $('<div>').addClass('pages');
 	this.ui.backButton = $('<div>').addClass('back').attr('title', 'Go to previous page').click(function() {
 		pager.selectPage(pager.cursor - 1);
@@ -452,12 +525,7 @@ grid2pager.prototype.init = function(grid) {
 
 	this.ui.body.append(this.ui.backButton, this.ui.pages, this.ui.nextButton,this.ui.pageSize, this.ui.resultText);
 	this.pageElements = [];
-	['pageSelected', 'sizeChanged'].forEach(function(ev) {
-		pager.on(ev, function(value) {
-			grid.trigger(ev, [value]);
 
-		});
-	});
 };
 
 grid2pager.prototype.injectInto = function(elm) {
@@ -465,7 +533,8 @@ grid2pager.prototype.injectInto = function(elm) {
 };
 
 grid2pager.prototype.initPageSizes = function(defaultSize, sizes) {
-	this.ui.pageSize.empty()
+	this.ui.pageSize.empty();
+	this.size = defaultSize;
 	for(var i = 0 ;i < sizes.length;i++) {
 		var opt = $('<option>').text(sizes[i]).attr('value', sizes[i]);
 		if(sizes[i] == defaultSize) {
@@ -489,10 +558,7 @@ grid2pager.prototype.setRowNum = function(rowNum) {
 	this.ui.resultText.text('Showing rows ' + start + ' to ' + end + '  out of ' + rowNum)
 	this.drawPages();
 };
-grid2pager.prototype.getPageSize = function() {
-	var pagesize =  $('option:selected', this.ui.pageSize).get(0).value;
-	return pagesize;
-};
+
 grid2pager.prototype.getNumPages = function() {
 	var numPages = Math.ceil(this.rowNum/this.getPageSize());
 	return numPages;
@@ -532,6 +598,10 @@ grid2pager.prototype.drawPages = function() {
 	}
 
 };
+grid2pager.prototype.getUIPageSize = function() {
+	var pagesize = $('option:selected', this.ui.pageSize).get(0).value;
+	return pagesize;
+}
 grid2pager.prototype.drawPagesSeparator = function() {
 	var separator = $('<div>').text('...').addClass('separator');
 	this.ui.pages.append(separator);
@@ -564,18 +634,11 @@ grid2pager.prototype.selectPage = function(pageNum, skipEvent) {
 	}
 };
 
+grid2pager.prototype.getPageSize = function() {
+	return this.size;
+}
+
 grid2pager.prototype.setPageSize = function(size) {
+	this.size = size;
 	$('option[value=' + size +']', this.ui.pageSize).attr('selected', 'selected');
 };
-
-grid2pager.prototype.bindPager = function(otherPager) {
-	this.on('sizeChanged', function (size) {
-		otherPager.setPageSize(size, true);
-	})
-
-	this.on('pageSelected', function (page) {
-		otherPager.selectPage(page, true)
-
-	});
-};
-
